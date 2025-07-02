@@ -2,12 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  CustomAccordion, 
-  CustomAccordionContent, 
-  CustomAccordionItem, 
-  CustomAccordionTrigger 
-} from "@/components/ui/custom-accordion";
+import { DynamicAccordion } from "@/components/DynamicAccordion";
+import { ComponentRegistry } from "@/types/accordion-config";
+import accordionConfig from "@/config/accordion-config.json";
 import * as Plot from "@observablehq/plot";
 
 // Dynamic Component 1: Counter with Reset
@@ -51,6 +48,12 @@ function CounterComponent({ count, setCount }: { count: number; setCount: (count
     </div>
   );
 }
+
+// Static method for dynamic accordion
+CounterComponent.getContext = (props: Record<string, any>) => ({
+  "Current Count": props.count,
+  "Status": props.count > 0 ? "Positive" : props.count < 0 ? "Negative" : "Zero"
+});
 
 // Dynamic Component 2: Theme Toggle with Animation
 function ThemeToggleComponent({ 
@@ -109,6 +112,12 @@ function ThemeToggleComponent({
   );
 }
 
+// Static method for dynamic accordion
+ThemeToggleComponent.getContext = (props: Record<string, any>) => ({
+  "Current Mode": props.isDark ? "Dark" : "Light",
+  "Animation Status": props.isAnimating ? "Animating" : "Idle"
+});
+
 // Dynamic Component 3: Progress Bar with Controls
 function ProgressComponent({ progress, setProgress }: { progress: number; setProgress: (progress: number) => void }) {
   const getContext = () => ({
@@ -156,6 +165,12 @@ function ProgressComponent({ progress, setProgress }: { progress: number; setPro
     </div>
   );
 }
+
+// Static method for dynamic accordion
+ProgressComponent.getContext = (props: Record<string, any>) => ({
+  "Progress": `${props.progress}%`,
+  "Status": props.progress === 100 ? "Complete" : props.progress > 50 ? "In Progress" : "Getting Started"
+});
 
 // Dynamic Component 4: Color Picker with Preview
 function ColorPickerComponent({ selectedColor, setSelectedColor }: { selectedColor: string; setSelectedColor: (color: string) => void }) {
@@ -208,6 +223,26 @@ function ColorPickerComponent({ selectedColor, setSelectedColor }: { selectedCol
     </div>
   );
 }
+
+// Static method for dynamic accordion
+ColorPickerComponent.getContext = (props: Record<string, any>) => {
+  const getColorName = (hex: string) => {
+    const colorMap: { [key: string]: string } = {
+      '#3b82f6': 'Blue',
+      '#ef4444': 'Red',
+      '#10b981': 'Green',
+      '#f59e0b': 'Yellow',
+      '#8b5cf6': 'Purple',
+      '#ec4899': 'Pink'
+    };
+    return colorMap[hex] || 'Unknown';
+  };
+  
+  return {
+    "Selected Color": props.selectedColor,
+    "Color Name": getColorName(props.selectedColor)
+  };
+};
 
 // Dynamic Component 5: Interactive Graph with Plot
 function GraphComponent({ 
@@ -410,6 +445,13 @@ function GraphComponent({
   );
 }
 
+// Static method for dynamic accordion
+GraphComponent.getContext = (props: Record<string, any>) => ({
+  "Data Points": props.dataPoints,
+  "Graph Type": props.graphType,
+  "Status": "Rendered"
+});
+
 // Context Display Component
 function ContextDisplay({ context }: { context: { [key: string]: string | number } }) {
   return (
@@ -429,8 +471,7 @@ function ContextDisplay({ context }: { context: { [key: string]: string | number
 export default function Home() {
   // Accordion state
   const [pinnedItems, setPinnedItems] = useState<Set<string>>(new Set());
-  const [openItems, setOpenItems] = useState<string[]>([]);
-
+  
   // Component states - lifted up to parent
   const [counterValue, setCounterValue] = useState(0);
   const [themeToggleState, setThemeToggleState] = useState(false);
@@ -449,72 +490,42 @@ export default function Home() {
       const newPinned = new Set(prev);
       if (newPinned.has(itemId)) {
         newPinned.delete(itemId);
-        // If unpinning and this item is currently open, close it
-        if (openItems.includes(itemId)) {
-          setOpenItems(prev => prev.filter(id => id !== itemId));
-        }
       } else {
         newPinned.add(itemId);
-        // If pinning and this item is not open, open it
-        if (!openItems.includes(itemId)) {
-          setOpenItems(prev => [...prev, itemId]);
-        }
       }
       return newPinned;
     });
   };
 
-  const handleValueChange = (value: string[]) => {
-    // Find the newly clicked item (the one that's in value but not in openItems)
-    const newlyClicked = value.find(id => !openItems.includes(id));
-    
-    if (newlyClicked) {
-      // Keep only pinned items and the newly clicked item
-      const pinnedArray = Array.from(pinnedItems);
-      setOpenItems([...pinnedArray, newlyClicked]);
-    } else {
-      // If no new item was clicked, it means we're closing items
-      // Keep only pinned items
-      setOpenItems(Array.from(pinnedItems));
-    }
+  // Component registry
+  const componentRegistry: ComponentRegistry = {
+    CounterComponent,
+    ThemeToggleComponent,
+    ProgressComponent,
+    ColorPickerComponent,
+    GraphComponent
   };
 
-  // Get context for each component
-  const getCounterContext = () => ({
-    "Current Count": counterValue,
-    "Status": counterValue > 0 ? "Positive" : counterValue < 0 ? "Negative" : "Zero"
-  });
+  // State maps for dynamic binding
+  const stateMap = {
+    counterValue,
+    themeToggleState,
+    themeAnimating,
+    progressValue,
+    selectedColorValue,
+    graphDataPoints,
+    graphType
+  };
 
-  const getThemeContext = () => ({
-    "Current Mode": themeToggleState ? "Dark" : "Light",
-    "Animation Status": themeAnimating ? "Animating" : "Idle"
-  });
-
-  const getProgressContext = () => ({
-    "Progress": `${progressValue}%`,
-    "Status": progressValue === 100 ? "Complete" : progressValue > 50 ? "In Progress" : "Getting Started"
-  });
-
-  const getColorContext = () => ({
-    "Selected Color": selectedColorValue,
-    "Color Name": (() => {
-      const colorMap: { [key: string]: string } = {
-        '#3b82f6': 'Blue',
-        '#ef4444': 'Red',
-        '#10b981': 'Green',
-        '#f59e0b': 'Yellow',
-        '#8b5cf6': 'Purple',
-        '#ec4899': 'Pink'
-      };
-      return colorMap[selectedColorValue] || 'Unknown';
-    })()
-  });
-
-  const getGraphContext = () => ({
-    "Data Points": graphDataPoints,
-    "Graph Type": graphType,
-    "Status": "Rendered"
-  });
+  const setStateMap = {
+    setCounterValue,
+    setThemeToggleState,
+    setThemeAnimating,
+    setProgressValue,
+    setSelectedColorValue,
+    setGraphDataPoints,
+    setGraphType
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-8">
@@ -522,10 +533,10 @@ export default function Home() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-            Custom Accordion Component
+            Dynamic Accordion Component
           </h1>
           <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
-            Featuring 4-sided borders, centered titles, and interactive data visualization
+            Fully configurable via JSON with 4-sided borders, centered titles, and interactive data visualization
           </p>
           <Button variant="ghost" onClick={handleClick}>
             Click me for a popup!
@@ -535,160 +546,21 @@ export default function Home() {
         {/* Instructions */}
         <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            💡 <strong>Tip:</strong> Click the pin icon (left) on any accordion item to keep it open. 
+            💡 <strong>Tip:</strong> This accordion is now fully dynamic and configured via JSON! 
+            Click the pin icon (left) on any accordion item to keep it open. 
             Each layer has configurable margins (left, right, bottom) and the graph component uses ObservableHQ Plot for interactive data visualization!
           </p>
         </div>
 
-        {/* Custom Accordion */}
-        <CustomAccordion 
-          type="multiple" 
-          value={openItems}
-          onValueChange={handleValueChange}
-          className="w-full"
-        >
-          <CustomAccordionItem 
-            value="item-1"
-            maxHeight="400px"
-            marginLeft={6}
-            marginRight={6}
-            bottomMargin={6}
-          >
-            <CustomAccordionTrigger
-              isPinned={pinnedItems.has("item-1")}
-              onPinToggle={() => handlePinToggle("item-1")}
-            >
-              Interactive Counter
-            </CustomAccordionTrigger>
-            <CustomAccordionContent
-              maxHeight="400px"
-              marginLeft={6}
-              marginRight={6}
-              bottomMargin={6}
-            >
-              <CounterComponent count={counterValue} setCount={setCounterValue} />
-            </CustomAccordionContent>
-            {!openItems.includes("item-1") && (
-              <ContextDisplay context={getCounterContext()} />
-            )}
-          </CustomAccordionItem>
-
-          <CustomAccordionItem 
-            value="item-2"
-            maxHeight="350px"
-            marginLeft={4}
-            marginRight={4}
-            bottomMargin={8}
-          >
-            <CustomAccordionTrigger
-              isPinned={pinnedItems.has("item-2")}
-              onPinToggle={() => handlePinToggle("item-2")}
-            >
-              Theme Toggle
-            </CustomAccordionTrigger>
-            <CustomAccordionContent
-              maxHeight="350px"
-              marginLeft={4}
-              marginRight={4}
-              bottomMargin={8}
-            >
-              <ThemeToggleComponent 
-                isDark={themeToggleState} 
-                setIsDark={setThemeToggleState}
-                isAnimating={themeAnimating}
-                setIsAnimating={setThemeAnimating}
-              />
-            </CustomAccordionContent>
-            {!openItems.includes("item-2") && (
-              <ContextDisplay context={getThemeContext()} />
-            )}
-          </CustomAccordionItem>
-
-          <CustomAccordionItem 
-            value="item-3"
-            maxHeight="300px"
-            marginLeft={8}
-            marginRight={8}
-            bottomMargin={4}
-          >
-            <CustomAccordionTrigger
-              isPinned={pinnedItems.has("item-3")}
-              onPinToggle={() => handlePinToggle("item-3")}
-            >
-              Progress Tracker
-            </CustomAccordionTrigger>
-            <CustomAccordionContent
-              maxHeight="300px"
-              marginLeft={8}
-              marginRight={8}
-              bottomMargin={4}
-            >
-              <ProgressComponent progress={progressValue} setProgress={setProgressValue} />
-            </CustomAccordionContent>
-            {!openItems.includes("item-3") && (
-              <ContextDisplay context={getProgressContext()} />
-            )}
-          </CustomAccordionItem>
-
-          <CustomAccordionItem 
-            value="item-4"
-            maxHeight="450px"
-            marginLeft={2}
-            marginRight={2}
-            bottomMargin={10}
-          >
-            <CustomAccordionTrigger
-              isPinned={pinnedItems.has("item-4")}
-              onPinToggle={() => handlePinToggle("item-4")}
-            >
-              Color Picker
-            </CustomAccordionTrigger>
-            <CustomAccordionContent
-              maxHeight="450px"
-              marginLeft={2}
-              marginRight={2}
-              bottomMargin={10}
-            >
-              <ColorPickerComponent selectedColor={selectedColorValue} setSelectedColor={setSelectedColorValue} />
-            </CustomAccordionContent>
-            {!openItems.includes("item-4") && (
-              <ContextDisplay context={getColorContext()} />
-            )}
-          </CustomAccordionItem>
-
-          <CustomAccordionItem 
-            value="item-5"
-            maxHeight="600px"
-            marginLeft={0}
-            marginRight={0}
-            bottomMargin={20}
-          >
-            <CustomAccordionTrigger
-              isPinned={pinnedItems.has("item-5")}
-              onPinToggle={() => handlePinToggle("item-5")}
-            >
-              Interactive Graph
-            </CustomAccordionTrigger>
-            <CustomAccordionContent
-              maxHeight="600px"
-              marginLeft={0}
-              marginRight={0}
-              bottomMargin={20}
-            >
-              <GraphComponent 
-                dataPoints={graphDataPoints} 
-                setDataPoints={setGraphDataPoints}
-                graphType={graphType}
-                setGraphType={setGraphType}
-                maxHeight="600px"
-                bottomMargin={20}
-              />
-            </CustomAccordionContent>
-            {!openItems.includes("item-5") && (
-              <ContextDisplay context={getGraphContext()} />
-            )}
-          </CustomAccordionItem>
-        </CustomAccordion>
+        {/* Dynamic Accordion */}
+        <DynamicAccordion
+          config={accordionConfig}
+          componentRegistry={componentRegistry}
+          stateMap={stateMap}
+          setStateMap={setStateMap}
+          onPinToggle={handlePinToggle}
+          pinnedItems={pinnedItems}
+        />
       </div>
     </div>
   );

@@ -1,0 +1,78 @@
+{
+  "defaultLayer": {
+    "maxHeight": "400px",
+    "marginLeft": 6,
+    "marginRight": 6,
+    "bottomMargin": 6
+  },
+  "layers": [
+    {
+      "id": "item-1",
+      "name": "Interactive Counter",
+      "componentName": "CounterComponent",
+      "componentProps": {
+        "count": "counterValue",
+        "setCount": "setCounterValue"
+      }
+    },
+    {
+      "id": "item-2",
+      "name": "Theme Toggle",
+      "componentName": "ThemeToggleComponent",
+      "componentProps": {
+        "isDark": "themeToggleState",
+        "setIsDark": "setThemeToggleState",
+        "isAnimating": "themeAnimating",
+        "setIsAnimating": "setThemeAnimating"
+      },
+      "maxHeight": "350px",
+      "marginLeft": 4,
+      "marginRight": 4,
+      "bottomMargin": 8
+    },
+    {
+      "id": "item-3",
+      "name": "Progress Tracker",
+      "componentName": "ProgressComponent",
+      "componentProps": {
+        "progress": "progressValue",
+        "setProgress": "setProgressValue"
+      },
+      "marginLeft": 8,
+      "marginRight": 8,
+      "bottomMargin": 4
+    },
+    {
+      "id": "item-4",
+      "name": "Color Picker",
+      "componentName": "ColorPickerComponent",
+      "componentProps": {
+        "selectedColor": "selectedColorValue",
+        "setSelectedColor": "setSelectedColorValue"
+      },
+      "maxHeight": "450px",
+      "marginLeft": 2,
+      "marginRight": 2,
+      "bottomMargin": 10
+    },
+    {
+      "id": "item-5",
+      "name": "Interactive Graph",
+      "componentName": "GraphComponent",
+      "componentProps": {
+        "dataPoints": "graphDataPoints",
+        "setDataPoints": "setGraphDataPoints",
+        "graphType": "graphType",
+        "setGraphType": "setGraphType",
+        "maxHeight": "600px",
+        "bottomMargin": 20
+      },
+      "maxHeight": "600px",
+      "marginLeft": 0,
+      "marginRight": 0,
+      "bottomMargin": 20
+    }
+  ],
+  "defaultOpenItems": [],
+  "pinnedItems": []
+} 
