@@ -23,8 +23,17 @@ function GraphRenderer({
       // Clear previous plot
       graphRef.current.innerHTML = '';
       
-      // Calculate plot width
-      const plotWidth = graphRef.current.clientWidth - 32; // Account for padding
+      // Calculate plot dimensions accounting for container padding
+      const plotWidth = graphRef.current.clientWidth - 32; // Account for left/right padding
+      const plotHeight = graphRef.current.clientHeight - 32; // Account for top/bottom padding
+      
+      console.log('Container dimensions:', {
+        width: graphRef.current.clientWidth,
+        height: graphRef.current.clientHeight,
+        plotWidth,
+        plotHeight,
+        containerPadding: 32
+      });
       
       // Generate data based on dataPoints
       const data = Array.from({ length: dataPoints }, (_, i) => ({
@@ -115,8 +124,18 @@ export class GraphComponent extends BaseComponent {
     // Account for layer padding: top (1rem = 16px) + bottom (bottomMargin * 0.25rem)
     const layerPadding = 16 + (bottomMargin * 0.25);
     const availableHeight = maxHeightNum - layerPadding;
-    const graphContainerHeight = Math.max(200, availableHeight); // Minimum 200px height
-    const plotHeight = graphContainerHeight + 200; // Plot is taller than container to enable scrolling
+    
+    // Account for component content: title (~24px) + controls (~60px) + spacing (~24px)
+    const componentContentHeight = 24 + 60 + 24; // 108px total
+    const graphContainerHeight = Math.max(200, availableHeight - componentContentHeight);
+    
+    console.log('Height calculations:', {
+      maxHeightNum,
+      layerPadding,
+      availableHeight,
+      componentContentHeight,
+      graphContainerHeight
+    });
 
     return (
       <div className="space-y-6">
@@ -152,10 +171,10 @@ export class GraphComponent extends BaseComponent {
             </div>
           </div>
 
-          {/* Graph Container with Internal Scroll */}
+          {/* Graph Container */}
           <div 
             ref={this.graphRef}
-            className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-white dark:bg-slate-900 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent"
+            className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-white dark:bg-slate-900"
             style={{ 
               height: `${graphContainerHeight}px`,
               minHeight: `${graphContainerHeight}px`
@@ -168,7 +187,7 @@ export class GraphComponent extends BaseComponent {
             graphType={graphType}
             maxHeight={maxHeight}
             bottomMargin={bottomMargin}
-            plotHeight={plotHeight}
+            plotHeight={0} // Not used anymore, calculated internally
             graphRef={this.graphRef}
           />
         </div>
