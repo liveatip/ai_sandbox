@@ -14,8 +14,17 @@ function CustomAccordion({
 
 function CustomAccordionItem({
   className,
+  maxHeight,
+  marginLeft = 6,
+  marginRight = 6,
+  bottomMargin = 4,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Item>) {
+}: React.ComponentProps<typeof AccordionPrimitive.Item> & {
+  maxHeight?: string
+  marginLeft?: number
+  marginRight?: number
+  bottomMargin?: number
+}) {
   return (
     <AccordionPrimitive.Item
       data-slot="custom-accordion-item"
@@ -23,6 +32,10 @@ function CustomAccordionItem({
         "border border-slate-200 dark:border-slate-700 rounded-lg mb-4 last:mb-0 shadow-sm",
         className
       )}
+      data-max-height={maxHeight}
+      data-margin-left={marginLeft}
+      data-margin-right={marginRight}
+      data-bottom-margin={bottomMargin}
       {...props}
     />
   )
@@ -76,15 +89,37 @@ function CustomAccordionTrigger({
 function CustomAccordionContent({
   className,
   children,
+  maxHeight,
+  marginLeft = 6,
+  marginRight = 6,
+  bottomMargin = 4,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Content>) {
+}: React.ComponentProps<typeof AccordionPrimitive.Content> & {
+  maxHeight?: string
+  marginLeft?: number
+  marginRight?: number
+  bottomMargin?: number
+}) {
   return (
     <AccordionPrimitive.Content
       data-slot="custom-accordion-content"
       className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm"
       {...props}
     >
-      <div className={cn("px-6 py-4", className)}>{children}</div>
+      <div 
+        className={cn(
+          className
+        )}
+        style={{
+          maxHeight: maxHeight || 'none',
+          paddingLeft: `${marginLeft * 0.25}rem`,
+          paddingRight: `${marginRight * 0.25}rem`,
+          paddingTop: '1rem',
+          paddingBottom: `${bottomMargin * 0.25}rem`
+        }}
+      >
+        {children}
+      </div>
     </AccordionPrimitive.Content>
   )
 }
