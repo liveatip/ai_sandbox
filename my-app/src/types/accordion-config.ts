@@ -5,6 +5,7 @@ export interface DefaultLayerConfig {
   marginLeft: number;
   marginRight: number;
   bottomMargin: number;
+  layerVerticalPadding: string;
 }
 
 export interface AccordionLayerConfig {
@@ -16,6 +17,7 @@ export interface AccordionLayerConfig {
   marginLeft?: number;
   marginRight?: number;
   bottomMargin?: number;
+  layerVerticalPadding?: string;
   isPinned?: boolean;
 }
 

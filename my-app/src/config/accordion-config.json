@@ -3,7 +3,8 @@
     "maxHeight": "400px",
     "marginLeft": 6,
     "marginRight": 6,
-    "bottomMargin": 6
+    "bottomMargin": 6,
+    "layerVerticalPadding": "20px"
   },
   "layers": [
     {
@@ -50,7 +51,7 @@
         "selectedColor": "selectedColorValue",
         "setSelectedColor": "setSelectedColorValue"
       },
-      "maxHeight": "450px",
+      "maxHeight": "500px",
       "marginLeft": 2,
       "marginRight": 2,
       "bottomMargin": 10

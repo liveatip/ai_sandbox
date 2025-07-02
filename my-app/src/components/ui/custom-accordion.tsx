@@ -18,24 +18,32 @@ function CustomAccordionItem({
   marginLeft = 6,
   marginRight = 6,
   bottomMargin = 4,
+  layerVerticalPadding = "10px",
+  isLastItem = false,
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Item> & {
   maxHeight?: string
   marginLeft?: number
   marginRight?: number
   bottomMargin?: number
+  layerVerticalPadding?: string
+  isLastItem?: boolean
 }) {
   return (
     <AccordionPrimitive.Item
       data-slot="custom-accordion-item"
       className={cn(
-        "border border-slate-200 dark:border-slate-700 rounded-lg mb-4 last:mb-0 shadow-sm",
+        "border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm",
         className
       )}
+      style={{
+        marginBottom: isLastItem ? "0px" : (layerVerticalPadding === "0px" ? "0px" : layerVerticalPadding),
+      }}
       data-max-height={maxHeight}
       data-margin-left={marginLeft}
       data-margin-right={marginRight}
       data-bottom-margin={bottomMargin}
+      data-layer-vertical-padding={layerVerticalPadding}
       {...props}
     />
   )

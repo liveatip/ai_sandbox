@@ -7,15 +7,19 @@ import {
   CustomAccordionItem, 
   CustomAccordionTrigger 
 } from "@/components/ui/custom-accordion";
-import { AccordionConfig, AccordionLayerConfig, ComponentRegistry } from "@/types/accordion-config";
+import { AccordionConfig, AccordionLayerConfig } from "@/types/accordion-config";
+import { createComponent, ComponentRegistry } from "./ComponentRegistry";
+import { BaseComponent } from "./BaseComponent";
 
 interface DynamicAccordionProps {
   config: AccordionConfig;
   componentRegistry: ComponentRegistry;
   stateMap: Record<string, any>;
   setStateMap: Record<string, (value: any) => void>;
-  onPinToggle?: (itemId: string) => void;
+  onPinToggle?: (itemId: string, shouldExpand?: boolean) => void;
   pinnedItems?: Set<string>;
+  openItems?: string[];
+  setOpenItems?: (items: string[]) => void;
 }
 
 export function DynamicAccordion({
@@ -24,32 +28,42 @@ export function DynamicAccordion({
   stateMap,
   setStateMap,
   onPinToggle,
-  pinnedItems = new Set()
+  pinnedItems = new Set(),
+  openItems: externalOpenItems,
+  setOpenItems: externalSetOpenItems
 }: DynamicAccordionProps) {
-  const [openItems, setOpenItems] = useState<string[]>(config.defaultOpenItems || []);
+  const [internalOpenItems, setInternalOpenItems] = useState<string[]>(config.defaultOpenItems || []);
+  
+  // Use external state if provided, otherwise use internal state
+  const openItems = externalOpenItems || internalOpenItems;
+  const setOpenItems = externalSetOpenItems || setInternalOpenItems;
 
   const handleValueChange = (value: string[]) => {
-    // If an item was just opened (added to the array)
-    const newlyOpened = value.find(item => !openItems.includes(item));
-    
-    if (newlyOpened) {
-      // Keep only the newly opened item and pinned items
-      const itemsToKeep = [newlyOpened, ...Array.from(pinnedItems)];
-      setOpenItems(itemsToKeep);
-    } else {
-      // If an item was closed, just update the state normally
-      setOpenItems(value);
+    // Check if this is an opening action (value has more items than current openItems)
+    if (value.length > openItems.length) {
+      // Find the newly opened item
+      const newlyOpened = value.find(item => !openItems.includes(item));
+      
+      if (newlyOpened) {
+        // Keep only the newly opened item and pinned items
+        const itemsToKeep = [newlyOpened, ...Array.from(pinnedItems)];
+        setOpenItems(itemsToKeep);
+        return;
+      }
     }
+    
+    // If an item was closed, check if it was a pinned item and unpin it
+    const closedItem = openItems.find(item => !value.includes(item));
+    if (closedItem && pinnedItems.has(closedItem)) {
+      // Unpin the item that was manually closed
+      onPinToggle?.(closedItem, false);
+    }
+    
+    // Update the state normally
+    setOpenItems(value);
   };
 
   const renderComponent = (layerConfig: AccordionLayerConfig) => {
-    const Component = componentRegistry[layerConfig.componentName];
-    
-    if (!Component) {
-      console.error(`Component ${layerConfig.componentName} not found in registry`);
-      return <div>Component not found: {layerConfig.componentName}</div>;
-    }
-
     // Map component props to actual state values and setters
     const resolvedProps: Record<string, any> = {};
     
@@ -71,7 +85,15 @@ export function DynamicAccordion({
       }
     });
 
-    return <Component {...resolvedProps} />;
+    // Create component instance using factory
+    const componentInstance = createComponent(layerConfig.componentName, resolvedProps);
+    
+    if (!componentInstance) {
+      return <div>Component not found: {layerConfig.componentName}</div>;
+    }
+
+    // Render the component
+    return componentInstance.render();
   };
 
   const getMergedLayerAttributes = (layerConfig: AccordionLayerConfig) => {
@@ -80,24 +102,28 @@ export function DynamicAccordion({
       marginLeft: layerConfig.marginLeft ?? config.defaultLayer.marginLeft,
       marginRight: layerConfig.marginRight ?? config.defaultLayer.marginRight,
       bottomMargin: layerConfig.bottomMargin ?? config.defaultLayer.bottomMargin,
+      layerVerticalPadding: layerConfig.layerVerticalPadding ?? config.defaultLayer.layerVerticalPadding,
     };
   };
 
   const getContextForLayer = (layerConfig: AccordionLayerConfig) => {
-    const Component = componentRegistry[layerConfig.componentName];
-    if (Component && typeof Component.getContext === 'function') {
-      // Map props to actual values for context calculation
-      const resolvedProps: Record<string, any> = {};
-      Object.entries(layerConfig.componentProps).forEach(([key, value]) => {
-        if (typeof value === 'string' && stateMap[value] !== undefined) {
-          resolvedProps[key] = stateMap[value];
-        } else {
-          resolvedProps[key] = value;
-        }
-      });
-      
-      return Component.getContext(resolvedProps);
+    // Map props to actual values for context calculation
+    const resolvedProps: Record<string, any> = {};
+    Object.entries(layerConfig.componentProps).forEach(([key, value]) => {
+      if (typeof value === 'string' && stateMap[value] !== undefined) {
+        resolvedProps[key] = stateMap[value];
+      } else {
+        resolvedProps[key] = value;
+      }
+    });
+    
+    // Create component instance to get context
+    const componentInstance = createComponent(layerConfig.componentName, resolvedProps);
+    
+    if (componentInstance) {
+      return componentInstance.getContext();
     }
+    
     return {};
   };
 
@@ -108,8 +134,9 @@ export function DynamicAccordion({
       onValueChange={handleValueChange}
       className="w-full"
     >
-      {config.layers.map((layer) => {
+      {config.layers.map((layer, index) => {
         const mergedAttributes = getMergedLayerAttributes(layer);
+        const isLastItem = index === config.layers.length - 1;
         return (
           <CustomAccordionItem 
             key={layer.id}
@@ -118,10 +145,22 @@ export function DynamicAccordion({
             marginLeft={mergedAttributes.marginLeft}
             marginRight={mergedAttributes.marginRight}
             bottomMargin={mergedAttributes.bottomMargin}
+            layerVerticalPadding={mergedAttributes.layerVerticalPadding}
+            isLastItem={isLastItem}
           >
             <CustomAccordionTrigger
               isPinned={pinnedItems.has(layer.id)}
-              onPinToggle={() => onPinToggle?.(layer.id)}
+              onPinToggle={() => {
+                const isCurrentlyOpen = openItems.includes(layer.id);
+                const isCurrentlyPinned = pinnedItems.has(layer.id);
+                
+                // If we're pinning an item that's not open, expand it
+                if (!isCurrentlyPinned && !isCurrentlyOpen) {
+                  onPinToggle?.(layer.id, true);
+                } else {
+                  onPinToggle?.(layer.id, false);
+                }
+              }}
             >
               {layer.name}
             </CustomAccordionTrigger>
